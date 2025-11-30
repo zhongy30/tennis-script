@@ -13,18 +13,24 @@ if [ ! -f "$EDGE_PATH" ]; then
     exit 1
 fi
 
-# 关闭可能已存在的 Edge 进程（可选）
-echo "正在关闭现有的 Edge 进程..."
-pkill -f "Microsoft Edge" 2>/dev/null
-sleep 2
+# 检查是否已有远程调试端口在运行
+if lsof -i :9222 > /dev/null 2>&1; then
+    echo "✅ Edge 远程调试已在运行（端口 9222）"
+    echo "正在打开新窗口..."
+    # 使用 open 命令打开新窗口，不会关闭现有进程
+    open -a "Microsoft Edge" --args --remote-debugging-port=9222 --user-data-dir="/tmp/edge-debug" > /dev/null 2>&1
+    sleep 1
+    echo "✅ 已打开新窗口"
+else
+    # 如果没有运行，则启动 Edge（远程调试模式）
+    echo "正在启动 Edge 浏览器（远程调试模式）..."
+    echo "使用用户数据目录: /tmp/edge-debug"
+    "$EDGE_PATH" --remote-debugging-port=9222 --user-data-dir="/tmp/edge-debug" > /dev/null 2>&1 &
+    sleep 3
+fi
 
-# 启动 Edge（远程调试模式）
-echo "正在启动 Edge 浏览器（远程调试模式）..."
-echo "使用用户数据目录: /tmp/edge-debug"
-"$EDGE_PATH" --remote-debugging-port=9222 --user-data-dir="/tmp/edge-debug" > /dev/null 2>&1 &
-
-# 等待浏览器启动
-sleep 3
+# 等待浏览器启动或新窗口打开
+sleep 1
 
 # 检查是否成功启动
 if pgrep -f "Microsoft Edge" > /dev/null; then
